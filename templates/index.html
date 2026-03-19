@@ -13,8 +13,8 @@
         }
 
         .container {
-            max-width: 760px;
-            margin: 50px auto;
+            max-width: 900px;
+            margin: 40px auto;
             background: white;
             padding: 28px;
             border-radius: 12px;
@@ -56,7 +56,7 @@
             font-weight: bold;
         }
 
-        input, select, button {
+        input, select, button, textarea {
             width: 100%;
             padding: 10px 12px;
             font-size: 15px;
@@ -66,20 +66,38 @@
         }
 
         button {
-            background: #2563eb;
-            color: white;
             border: none;
             cursor: pointer;
             font-weight: bold;
         }
 
-        button:hover {
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
             background: #1e4fd1;
+        }
+
+        .btn-secondary {
+            background: #0f766e;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #0d5f59;
         }
 
         button:disabled {
             background: #94a3b8;
             cursor: not-allowed;
+        }
+
+        .button-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
         .hint {
@@ -129,8 +147,7 @@
             font-weight: bold;
         }
 
-        .summary-box {
-            display: none;
+        .summary-box, .json-box, .url-box {
             margin-top: 18px;
             padding: 16px;
             background: #f8fafc;
@@ -138,7 +155,11 @@
             border-radius: 10px;
         }
 
-        .summary-box h3 {
+        .summary-box, .json-box {
+            display: none;
+        }
+
+        .summary-box h3, .json-box h3, .url-box h3 {
             margin-top: 0;
             margin-bottom: 12px;
         }
@@ -168,6 +189,35 @@
             color: #111827;
         }
 
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #111827;
+            color: #f9fafb;
+            padding: 14px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .small-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .small-btn {
+            width: auto;
+            padding: 8px 12px;
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .small-btn:hover {
+            background: #d1d5db;
+        }
+
         .success-note {
             margin-top: 10px;
             font-size: 13px;
@@ -176,7 +226,8 @@
 
         @media (max-width: 700px) {
             .grid,
-            .summary-grid {
+            .summary-grid,
+            .button-row {
                 grid-template-columns: 1fr;
             }
         }
@@ -187,7 +238,7 @@
         <div class="brand">WAY SRL</div>
         <h1>⛽ Fuel Export Tool</h1>
         <div class="subtitle">
-            Welcome. Export processed fuel telemetry data as CSV for analysis.
+            Welcome. Export processed fuel telemetry data as CSV or inspect JSON directly.
         </div>
 
         <div id="errorBox" class="error-box"></div>
@@ -230,13 +281,24 @@
                 </div>
 
                 <div class="full">
-                    <button type="submit" id="submitBtn">Export CSV</button>
+                    <div class="button-row">
+                        <button type="button" id="csvBtn" class="btn-primary">Export CSV</button>
+                        <button type="button" id="jsonBtn" class="btn-secondary">Show JSON</button>
+                    </div>
                     <div class="success-note">
                         Enter either <strong>ID Mezzo</strong> or <strong>Targa</strong>, or both.
                     </div>
                 </div>
             </div>
         </form>
+
+        <div id="urlBox" class="url-box">
+            <h3>GET URL for JSON Endpoint</h3>
+            <pre id="getUrlPreview"></pre>
+            <div class="small-actions">
+                <button type="button" id="copyUrlBtn" class="small-btn">Copy URL</button>
+            </div>
+        </div>
 
         <div id="summaryBox" class="summary-box">
             <h3>Last Export Summary</h3>
@@ -268,18 +330,38 @@
             </div>
         </div>
 
+        <div id="jsonBox" class="json-box">
+            <h3>JSON Result</h3>
+            <pre id="jsonResult"></pre>
+            <div class="small-actions">
+                <button type="button" id="copyJsonBtn" class="small-btn">Copy JSON</button>
+            </div>
+        </div>
+
         <div class="note">
             At least one search value is required: <strong>ID Mezzo</strong> or <strong>Targa</strong>.
         </div>
     </div>
 
     <script>
-        const form = document.getElementById("fuelForm");
         const errorBox = document.getElementById("errorBox");
         const infoBox = document.getElementById("infoBox");
         const successBox = document.getElementById("successBox");
-        const submitBtn = document.getElementById("submitBtn");
+        const csvBtn = document.getElementById("csvBtn");
+        const jsonBtn = document.getElementById("jsonBtn");
         const summaryBox = document.getElementById("summaryBox");
+        const urlBox = document.getElementById("urlBox");
+        const jsonBox = document.getElementById("jsonBox");
+        const getUrlPreview = document.getElementById("getUrlPreview");
+        const jsonResult = document.getElementById("jsonResult");
+        const copyUrlBtn = document.getElementById("copyUrlBtn");
+        const copyJsonBtn = document.getElementById("copyJsonBtn");
+
+        const domainEl = document.getElementById("domain");
+        const idMezzoEl = document.getElementById("idMezzo");
+        const dateFromEl = document.getElementById("dateFrom");
+        const dateToEl = document.getElementById("dateTo");
+        const targaEl = document.getElementById("targa");
 
         function showError(message) {
             infoBox.style.display = "none";
@@ -313,11 +395,11 @@
 
         function saveLastValues() {
             const values = {
-                domain: document.getElementById("domain").value,
-                idMezzo: document.getElementById("idMezzo").value,
-                dateFrom: document.getElementById("dateFrom").value,
-                dateTo: document.getElementById("dateTo").value,
-                targa: document.getElementById("targa").value
+                domain: domainEl.value,
+                idMezzo: idMezzoEl.value,
+                dateFrom: dateFromEl.value,
+                dateTo: dateToEl.value,
+                targa: targaEl.value
             };
             localStorage.setItem("fuelExportLastValues", JSON.stringify(values));
         }
@@ -328,14 +410,57 @@
 
             try {
                 const values = JSON.parse(saved);
-                if (values.domain) document.getElementById("domain").value = values.domain;
-                if (values.idMezzo) document.getElementById("idMezzo").value = values.idMezzo;
-                if (values.dateFrom) document.getElementById("dateFrom").value = values.dateFrom;
-                if (values.dateTo) document.getElementById("dateTo").value = values.dateTo;
-                if (values.targa) document.getElementById("targa").value = values.targa;
+                if (values.domain) domainEl.value = values.domain;
+                if (values.idMezzo) idMezzoEl.value = values.idMezzo;
+                if (values.dateFrom) dateFromEl.value = values.dateFrom;
+                if (values.dateTo) dateToEl.value = values.dateTo;
+                if (values.targa) targaEl.value = values.targa;
             } catch {
                 console.log("Could not load saved values.");
             }
+        }
+
+        function getFormValues() {
+            return {
+                domain: domainEl.value.trim(),
+                idMezzo: idMezzoEl.value.trim(),
+                dateFrom: dateFromEl.value,
+                dateTo: dateToEl.value,
+                targa: targaEl.value.trim()
+            };
+        }
+
+        function validateForm(values) {
+            if (!values.idMezzo && !values.targa) {
+                return "Please provide at least one of: ID Mezzo or Targa.";
+            }
+            if (!values.dateFrom || !values.dateTo) {
+                return "Please select both Date From and Date To.";
+            }
+            if (values.dateFrom > values.dateTo) {
+                return "Date From cannot be later than Date To.";
+            }
+            return null;
+        }
+
+        function buildParams(values) {
+            const params = new URLSearchParams();
+            params.append("domain", values.domain);
+
+            if (values.dateFrom) params.append("dateFrom", values.dateFrom);
+            if (values.dateTo) params.append("dateTo", values.dateTo);
+            if (values.idMezzo) params.append("idMezzo", values.idMezzo);
+            if (values.targa) params.append("targa", values.targa);
+
+            return params;
+        }
+
+        function updateGetUrlPreview() {
+            const values = getFormValues();
+            const params = buildParams(values);
+            const url = `${window.location.origin}/fuel/data?${params.toString()}`;
+            getUrlPreview.textContent = url;
+            urlBox.style.display = "block";
         }
 
         function updateSummary(headers) {
@@ -348,52 +473,51 @@
             summaryBox.style.display = "block";
         }
 
-        loadLastValues();
+        async function copyText(text, successMessage) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showSuccess(successMessage);
+            } catch {
+                showError("Could not copy to clipboard.");
+            }
+        }
 
-        form.addEventListener("submit", async function (event) {
-            event.preventDefault();
+        loadLastValues();
+        updateGetUrlPreview();
+
+        [domainEl, idMezzoEl, dateFromEl, dateToEl, targaEl].forEach(el => {
+            el.addEventListener("input", updateGetUrlPreview);
+            el.addEventListener("change", updateGetUrlPreview);
+        });
+
+        copyUrlBtn.addEventListener("click", () => {
+            copyText(getUrlPreview.textContent, "GET URL copied.");
+        });
+
+        copyJsonBtn.addEventListener("click", () => {
+            copyText(jsonResult.textContent, "JSON copied.");
+        });
+
+        csvBtn.addEventListener("click", async function () {
             clearMessages();
 
-            const domain = document.getElementById("domain").value.trim();
-            const idMezzo = document.getElementById("idMezzo").value.trim();
-            const dateFrom = document.getElementById("dateFrom").value;
-            const dateTo = document.getElementById("dateTo").value;
-            const targa = document.getElementById("targa").value.trim();
-
-            if (!idMezzo && !targa) {
-                showError("Please provide at least one of: ID Mezzo or Targa.");
-                return;
-            }
-
-            if (!dateFrom || !dateTo) {
-                showError("Please select both Date From and Date To.");
-                return;
-            }
-
-            if (dateFrom > dateTo) {
-                showError("Date From cannot be later than Date To.");
+            const values = getFormValues();
+            const validationError = validateForm(values);
+            if (validationError) {
+                showError(validationError);
                 return;
             }
 
             saveLastValues();
+            updateGetUrlPreview();
 
-            const params = new URLSearchParams();
-            params.append("domain", domain);
-            params.append("dateFrom", dateFrom);
-            params.append("dateTo", dateTo);
-
-            if (idMezzo) {
-                params.append("idMezzo", idMezzo);
-            }
-
-            if (targa) {
-                params.append("targa", targa);
-            }
+            const params = buildParams(values);
 
             try {
-                submitBtn.disabled = true;
-                submitBtn.textContent = "Processing...";
-                showInfo("Request sent. Please wait while the CSV is being prepared...");
+                csvBtn.disabled = true;
+                jsonBtn.disabled = true;
+                csvBtn.textContent = "Processing...";
+                showInfo("Preparing CSV export...");
 
                 const response = await fetch(`/fuel/export?${params.toString()}`);
 
@@ -401,12 +525,8 @@
                     let errorMessage = "Request failed.";
                     try {
                         const errorData = await response.json();
-                        if (errorData.detail) {
-                            errorMessage = errorData.detail;
-                        }
-                    } catch {
-                        errorMessage = `Request failed with status ${response.status}.`;
-                    }
+                        if (errorData.detail) errorMessage = errorData.detail;
+                    } catch {}
                     showError(errorMessage);
                     return;
                 }
@@ -431,11 +551,59 @@
                 window.URL.revokeObjectURL(url);
 
                 showSuccess(`Success. CSV downloaded as ${filename}`);
-            } catch (error) {
+            } catch {
                 showError("Unexpected error while contacting the server.");
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = "Export CSV";
+                csvBtn.disabled = false;
+                jsonBtn.disabled = false;
+                csvBtn.textContent = "Export CSV";
+            }
+        });
+
+        jsonBtn.addEventListener("click", async function () {
+            clearMessages();
+
+            const values = getFormValues();
+            const validationError = validateForm(values);
+            if (validationError) {
+                showError(validationError);
+                return;
+            }
+
+            saveLastValues();
+            updateGetUrlPreview();
+
+            const params = buildParams(values);
+
+            try {
+                csvBtn.disabled = true;
+                jsonBtn.disabled = true;
+                jsonBtn.textContent = "Loading...";
+                showInfo("Fetching JSON data...");
+
+                const response = await fetch(`/fuel/data?${params.toString()}`);
+
+                if (!response.ok) {
+                    let errorMessage = "Request failed.";
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.detail) errorMessage = errorData.detail;
+                    } catch {}
+                    showError(errorMessage);
+                    return;
+                }
+
+                const data = await response.json();
+                jsonResult.textContent = JSON.stringify(data, null, 2);
+                jsonBox.style.display = "block";
+
+                showSuccess(`Success. JSON loaded with ${data.length} row(s).`);
+            } catch {
+                showError("Unexpected error while contacting the server.");
+            } finally {
+                csvBtn.disabled = false;
+                jsonBtn.disabled = false;
+                jsonBtn.textContent = "Show JSON";
             }
         });
     </script>
