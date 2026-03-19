@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WAY SRL Fuel Export Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f6f8fb;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 760px;
+            margin: 50px auto;
+            background: white;
+            padding: 28px;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        }
+
+        .brand {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        h1 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 30px;
+        }
+
+        .subtitle {
+            color: #555;
+            margin-bottom: 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .full {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 15px;
+            border: 1px solid #cfd6e4;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #1e4fd1;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .hint {
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .note {
+            margin-top: 16px;
+            padding: 12px;
+            background: #f3f6ff;
+            border-radius: 8px;
+            color: #334;
+        }
+
+        .error-box {
+            display: none;
+            margin-bottom: 18px;
+            padding: 12px;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .info-box {
+            display: none;
+            margin-bottom: 18px;
+            padding: 12px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .success-box {
+            display: none;
+            margin-bottom: 18px;
+            padding: 12px;
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .summary-box {
+            display: none;
+            margin-top: 18px;
+            padding: 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+        }
+
+        .summary-box h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .summary-item {
+            padding: 10px 12px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        .summary-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .summary-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .success-note {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        @media (max-width: 700px) {
+            .grid,
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="brand">WAY SRL</div>
+        <h1>⛽ Fuel Export Tool</h1>
+        <div class="subtitle">
+            Welcome. Export processed fuel telemetry data as CSV for analysis.
+        </div>
+
+        <div id="errorBox" class="error-box"></div>
+        <div id="infoBox" class="info-box"></div>
+        <div id="successBox" class="success-box"></div>
+
+        <form id="fuelForm">
+            <div class="grid">
+                <div>
+                    <label for="domain">Domain</label>
+                    <select name="domain" id="domain" required>
+                        {% for domain in domains %}
+                            <option value="{{ domain }}">{{ domain }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="idMezzo">ID Mezzo</label>
+                    <input type="number" name="idMezzo" id="idMezzo" placeholder="e.g. 902" />
+                    <div class="hint">Optional if Targa is provided.</div>
+                </div>
+
+                <div>
+                    <label for="dateFrom">Date From</label>
+                    <input type="date" name="dateFrom" id="dateFrom" required />
+                    <div class="hint">Use the browser date picker.</div>
+                </div>
+
+                <div>
+                    <label for="dateTo">Date To</label>
+                    <input type="date" name="dateTo" id="dateTo" required />
+                    <div class="hint">Use the browser date picker.</div>
+                </div>
+
+                <div class="full">
+                    <label for="targa">Targa</label>
+                    <input type="text" name="targa" id="targa" placeholder="e.g. GR364NG" />
+                    <div class="hint">Optional if ID Mezzo is provided.</div>
+                </div>
+
+                <div class="full">
+                    <button type="submit" id="submitBtn">Export CSV</button>
+                    <div class="success-note">
+                        Enter either <strong>ID Mezzo</strong> or <strong>Targa</strong>, or both.
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div id="summaryBox" class="summary-box">
+            <h3>Last Export Summary</h3>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-label">SQL Fetch Time</div>
+                    <div class="summary-value" id="sqlFetchTime">-</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Python Processing Time</div>
+                    <div class="summary-value" id="processingTime">-</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Total Time</div>
+                    <div class="summary-value" id="totalTime">-</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Raw Rows</div>
+                    <div class="summary-value" id="rawRows">-</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Final Rows</div>
+                    <div class="summary-value" id="finalRows">-</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Suspected Refuels</div>
+                    <div class="summary-value" id="suspectedRefuels">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="note">
+            At least one search value is required: <strong>ID Mezzo</strong> or <strong>Targa</strong>.
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById("fuelForm");
+        const errorBox = document.getElementById("errorBox");
+        const infoBox = document.getElementById("infoBox");
+        const successBox = document.getElementById("successBox");
+        const submitBtn = document.getElementById("submitBtn");
+        const summaryBox = document.getElementById("summaryBox");
+
+        function showError(message) {
+            infoBox.style.display = "none";
+            successBox.style.display = "none";
+            errorBox.textContent = message;
+            errorBox.style.display = "block";
+        }
+
+        function showInfo(message) {
+            errorBox.style.display = "none";
+            successBox.style.display = "none";
+            infoBox.textContent = message;
+            infoBox.style.display = "block";
+        }
+
+        function showSuccess(message) {
+            errorBox.style.display = "none";
+            infoBox.style.display = "none";
+            successBox.textContent = message;
+            successBox.style.display = "block";
+        }
+
+        function clearMessages() {
+            errorBox.style.display = "none";
+            errorBox.textContent = "";
+            infoBox.style.display = "none";
+            infoBox.textContent = "";
+            successBox.style.display = "none";
+            successBox.textContent = "";
+        }
+
+        function saveLastValues() {
+            const values = {
+                domain: document.getElementById("domain").value,
+                idMezzo: document.getElementById("idMezzo").value,
+                dateFrom: document.getElementById("dateFrom").value,
+                dateTo: document.getElementById("dateTo").value,
+                targa: document.getElementById("targa").value
+            };
+            localStorage.setItem("fuelExportLastValues", JSON.stringify(values));
+        }
+
+        function loadLastValues() {
+            const saved = localStorage.getItem("fuelExportLastValues");
+            if (!saved) return;
+
+            try {
+                const values = JSON.parse(saved);
+                if (values.domain) document.getElementById("domain").value = values.domain;
+                if (values.idMezzo) document.getElementById("idMezzo").value = values.idMezzo;
+                if (values.dateFrom) document.getElementById("dateFrom").value = values.dateFrom;
+                if (values.dateTo) document.getElementById("dateTo").value = values.dateTo;
+                if (values.targa) document.getElementById("targa").value = values.targa;
+            } catch {
+                console.log("Could not load saved values.");
+            }
+        }
+
+        function updateSummary(headers) {
+            document.getElementById("sqlFetchTime").textContent = (headers.get("X-SQL-Fetch-Time") || "-") + " s";
+            document.getElementById("processingTime").textContent = (headers.get("X-Processing-Time") || "-") + " s";
+            document.getElementById("totalTime").textContent = (headers.get("X-Total-Time") || "-") + " s";
+            document.getElementById("rawRows").textContent = headers.get("X-Raw-Rows") || "-";
+            document.getElementById("finalRows").textContent = headers.get("X-Final-Rows") || "-";
+            document.getElementById("suspectedRefuels").textContent = headers.get("X-Suspected-Refuels") || "-";
+            summaryBox.style.display = "block";
+        }
+
+        loadLastValues();
+
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            clearMessages();
+
+            const domain = document.getElementById("domain").value.trim();
+            const idMezzo = document.getElementById("idMezzo").value.trim();
+            const dateFrom = document.getElementById("dateFrom").value;
+            const dateTo = document.getElementById("dateTo").value;
+            const targa = document.getElementById("targa").value.trim();
+
+            if (!idMezzo && !targa) {
+                showError("Please provide at least one of: ID Mezzo or Targa.");
+                return;
+            }
+
+            if (!dateFrom || !dateTo) {
+                showError("Please select both Date From and Date To.");
+                return;
+            }
+
+            if (dateFrom > dateTo) {
+                showError("Date From cannot be later than Date To.");
+                return;
+            }
+
+            saveLastValues();
+
+            const params = new URLSearchParams();
+            params.append("domain", domain);
+            params.append("dateFrom", dateFrom);
+            params.append("dateTo", dateTo);
+
+            if (idMezzo) {
+                params.append("idMezzo", idMezzo);
+            }
+
+            if (targa) {
+                params.append("targa", targa);
+            }
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Processing...";
+                showInfo("Request sent. Please wait while the CSV is being prepared...");
+
+                const response = await fetch(`/fuel/export?${params.toString()}`);
+
+                if (!response.ok) {
+                    let errorMessage = "Request failed.";
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.detail) {
+                            errorMessage = errorData.detail;
+                        }
+                    } catch {
+                        errorMessage = `Request failed with status ${response.status}.`;
+                    }
+                    showError(errorMessage);
+                    return;
+                }
+
+                updateSummary(response.headers);
+
+                const blob = await response.blob();
+
+                let filename = "fuel_analysis.csv";
+                const disposition = response.headers.get("content-disposition");
+                if (disposition && disposition.includes("filename=")) {
+                    filename = disposition.split("filename=")[1].replace(/"/g, "");
+                }
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+                showSuccess(`Success. CSV downloaded as ${filename}`);
+            } catch (error) {
+                showError("Unexpected error while contacting the server.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Export CSV";
+            }
+        });
+    </script>
+</body>
+</html>
