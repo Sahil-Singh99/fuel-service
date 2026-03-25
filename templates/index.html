@@ -100,6 +100,19 @@
             gap: 12px;
         }
 
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .help-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+            line-height: 1.35;
+        }
+
         .hint {
             font-size: 13px;
             color: #666;
@@ -238,7 +251,7 @@
         <div class="brand">WAY SRL</div>
         <h1>⛽ Fuel Export Tool</h1>
         <div class="subtitle">
-            Welcome. Export processed fuel telemetry data as CSV or inspect JSON directly.
+            Choose between raw fuel data (JSON) or processed analysis (CSV with refuel detection and metrics).
         </div>
 
         <div id="errorBox" class="error-box"></div>
@@ -282,9 +295,21 @@
 
                 <div class="full">
                     <div class="button-row">
-                        <button type="button" id="csvBtn" class="btn-primary">Export CSV</button>
-                        <button type="button" id="jsonBtn" class="btn-secondary">Show JSON</button>
+                        <div class="button-group">
+                            <button type="button" id="csvBtn" class="btn-primary">Export CSV</button>
+                            <p class="help-text">
+                                Processed fuel data with refuel detection, fuel changes, and analysis.
+                            </p>
+                        </div>
+
+                        <div class="button-group">
+                            <button type="button" id="jsonBtn" class="btn-secondary">Show JSON</button>
+                            <p class="help-text">
+                                Raw fuel data directly from the database (no processing).
+                            </p>
+                        </div>
                     </div>
+
                     <div class="success-note">
                         Enter either <strong>ID Mezzo</strong> or <strong>Targa</strong>, or both.
                     </div>
@@ -458,7 +483,7 @@
         function updateGetUrlPreview() {
             const values = getFormValues();
             const params = buildParams(values);
-            const url = `${window.location.origin}/fuel/data?${params.toString()}`;
+            const url = `${window.location.origin}/fuel/raw?${params.toString()}`;
             getUrlPreview.textContent = url;
             urlBox.style.display = "block";
         }
@@ -519,7 +544,7 @@
                 csvBtn.textContent = "Processing...";
                 showInfo("Preparing CSV export...");
 
-                const response = await fetch(`/fuel/export?${params.toString()}`);
+                const response = await fetch(`/fuel/analyzed?${params.toString()}`);
 
                 if (!response.ok) {
                     let errorMessage = "Request failed.";
@@ -581,7 +606,7 @@
                 jsonBtn.textContent = "Loading...";
                 showInfo("Fetching JSON data...");
 
-                const response = await fetch(`/fuel/data?${params.toString()}`);
+                const response = await fetch(`/fuel/raw?${params.toString()}`);
 
                 if (!response.ok) {
                     let errorMessage = "Request failed.";

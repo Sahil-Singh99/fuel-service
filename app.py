@@ -8,6 +8,7 @@ import tempfile
 import time
 import os
 from datetime import datetime
+from fastapi.responses import FileResponse
 
 app = FastAPI(title="Fuel Service API")
 
@@ -81,7 +82,7 @@ def health():
     return {"message": "Fuel Service API is running"}
 
 
-@app.get("/fuel/data")
+@app.get("/fuel/raw")
 def get_fuel_data(
     domain: str = Query(..., description="Domain/server name, e.g. WAY6223"),
     dateFrom: str = Query(..., description="Start date in format YYYY-MM-DD"),
@@ -128,7 +129,7 @@ def get_fuel_data(
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 
-@app.get("/fuel/export")
+@app.get("/fuel/analyzed")
 def export_fuel_data(
     domain: str = Query(..., description="Domain/server name, e.g. WAY6223"),
     dateFrom: str = Query(..., description="Start date in format YYYY-MM-DD"),
@@ -200,3 +201,7 @@ def export_fuel_data(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+    
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse("static/favicon.ico")

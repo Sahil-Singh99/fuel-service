@@ -30,7 +30,6 @@ def process_fuel_data(
     ).reset_index(drop=True)
 
     # 3) Keep best row per same mezzo + timestamp
-    # Lowest PriorityGroup wins
     result = (
         result.sort_values(
             by=["ID_MEZZO", "DATAEVENTO", "PriorityGroup", "ID_EVENT"],
@@ -66,6 +65,17 @@ def process_fuel_data(
     ).astype(int)
 
     # 9) Possible refuel
+
+    MIN_VALID_FUEL = 5
+
+    result["IsSensorReset"] = (
+        result["PrevFuelValue"].notna()
+        & (result["PrevFuelValue"] < MIN_VALID_FUEL)
+        & (result["FuelValue"] > 50)
+    ).astype(int)
+
+    invalid_prev_mask = result["PrevFuelValue"] < MIN_VALID_FUEL
+
     result["IsPossibleRefuel"] = 0
 
     pct_mask = (
@@ -80,7 +90,7 @@ def process_fuel_data(
         & (result["FuelDelta"] >= litres_refuel_threshold)
     )
 
-    result.loc[pct_mask | litres_mask, "IsPossibleRefuel"] = 1
+    result.loc[(pct_mask | litres_mask) & ~invalid_prev_mask, "IsPossibleRefuel"] = 1
 
     # 10) Confidence
     result["RefuelConfidence"] = "NONE"
@@ -137,6 +147,7 @@ def process_fuel_data(
         "LAT",
         "LON",
         "IsSmallPositiveNoise",
+        "IsSensorReset",
         "IsPossibleRefuel",
         "RefuelConfidence",
         "HasLargeGapBefore",
